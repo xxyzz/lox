@@ -125,6 +125,8 @@ impl Scanner {
                     while self.peek() != '\n' && !self.is_at_end() {
                         self.advance();
                     }
+                } else if self.match_char('*') {
+                    self.block_comment();
                 } else {
                     self.add_token(TokenType::Slash, "");
                 }
@@ -224,5 +226,24 @@ impl Scanner {
             token_type = self.keywords[text.as_str()];
         }
         self.add_token(token_type, "");
+    }
+
+    fn block_comment(&mut self) {
+        while !self.is_at_end() {
+            match self.advance() {
+                '*' => {  // end
+                    if self.match_char('/') {
+                        break;
+                    }
+                },
+                '/' => {  // start
+                    if self.match_char('*') {
+                        self.block_comment();
+                    }
+                },
+                '\n' => self.line_num += 1,
+                _ => (),
+            }
+        }
     }
 }
