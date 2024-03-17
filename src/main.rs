@@ -3,8 +3,12 @@ use std::{
     io::{self, Write},
 };
 
+use parser::Parser;
 use scanner::Scanner;
+use token::{Token, TokenType};
 
+mod expr;
+mod parser;
 mod scanner;
 mod token;
 
@@ -37,13 +41,25 @@ fn run_prompt() {
 fn run(source: &str) {
     let mut scanner = Scanner::new(source.chars().collect());
     let tokens = scanner.scan_tokens();
-    for token in tokens {
-        println!("{token}");
-    }
+    let mut parser = Parser::new(tokens);
+    let expr = parser.parse();
+    println!("{:#?}", expr);
 }
 
 fn error(line_num: usize, message: &str) {
-    report(line_num, "", message);
+    report(line_num, "", message)
+}
+
+fn token_error(token: Token, message: &str) {
+    if token.token_type == TokenType::Eof {
+        report(token.line_num, " at end", message);
+    } else {
+        report(
+            token.line_num,
+            format!(" at '{}'", token.lexeme).as_str(),
+            message,
+        );
+    }
 }
 
 fn report(line_num: usize, where_e: &str, message: &str) {

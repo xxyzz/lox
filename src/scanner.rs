@@ -43,7 +43,7 @@ impl Scanner {
         }
     }
 
-    pub fn scan_tokens(&mut self) -> &Vec<Token> {
+    pub fn scan_tokens(&mut self) -> Vec<Token> {
         while !self.is_at_end() {
             // We are at the beginning of the next lexeme.
             self.start_index = self.current_index;
@@ -54,7 +54,7 @@ impl Scanner {
             line_num: self.line_num,
             ..Default::default()
         });
-        &self.tokens
+        self.tokens.clone()
     }
 
     fn is_at_end(&self) -> bool {
@@ -231,16 +231,18 @@ impl Scanner {
     fn block_comment(&mut self) {
         while !self.is_at_end() {
             match self.advance() {
-                '*' => {  // end
+                '*' => {
+                    // end
                     if self.match_char('/') {
                         break;
                     }
-                },
-                '/' => {  // start
+                }
+                '/' => {
+                    // start
                     if self.match_char('*') {
                         self.block_comment();
                     }
-                },
+                }
                 '\n' => self.line_num += 1,
                 _ => (),
             }

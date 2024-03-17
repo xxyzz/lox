@@ -1,6 +1,6 @@
 use std::fmt;
 
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
 pub enum TokenType {
     // Single-character tokens.
     #[default]
@@ -52,7 +52,7 @@ pub enum TokenType {
     Eof,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
