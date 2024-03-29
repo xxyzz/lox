@@ -150,11 +150,8 @@ impl Parser {
             return Expr::Literal(Literal::Nil);
         }
 
-        if self.match_type(&[TokenType::Number]) {
-            return Expr::Literal(Literal::Number(self.previous().literal.parse().unwrap()));
-        }
-        if self.match_type(&[TokenType::String]) {
-            return Expr::Literal(Literal::String(self.previous().literal.clone()));
+        if self.match_type(&[TokenType::Number, TokenType::String]) {
+            return Expr::Literal(self.previous().literal);
         }
 
         if self.match_type(&[TokenType::LeftParen]) {

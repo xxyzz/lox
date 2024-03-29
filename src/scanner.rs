@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     error,
+    expr::Literal,
     token::{Token, TokenType},
 };
 
@@ -67,7 +68,7 @@ impl Scanner {
         c
     }
 
-    fn add_token(&mut self, token_type: TokenType, literal: &str) {
+    fn add_token(&mut self, token_type: TokenType, literal: Literal) {
         let lexeme = self.source[self.start_index..self.current_index]
             .iter()
             .collect();
@@ -75,48 +76,48 @@ impl Scanner {
             token_type,
             lexeme,
             line_num: self.line_num,
-            literal: literal.to_string(),
+            literal,
         })
     }
 
     fn scan_token(&mut self) {
         match self.advance() {
-            '(' => self.add_token(TokenType::LeftParen, ""),
-            ')' => self.add_token(TokenType::RightParen, ""),
-            '{' => self.add_token(TokenType::LeftBrace, ""),
-            '}' => self.add_token(TokenType::RightBrace, ""),
-            ',' => self.add_token(TokenType::Comma, ""),
-            '.' => self.add_token(TokenType::Dot, ""),
-            '-' => self.add_token(TokenType::Minus, ""),
-            '+' => self.add_token(TokenType::Plus, ""),
-            ';' => self.add_token(TokenType::Semicolon, ""),
-            '*' => self.add_token(TokenType::Star, ""),
+            '(' => self.add_token(TokenType::LeftParen, Literal::Nil),
+            ')' => self.add_token(TokenType::RightParen, Literal::Nil),
+            '{' => self.add_token(TokenType::LeftBrace, Literal::Nil),
+            '}' => self.add_token(TokenType::RightBrace, Literal::Nil),
+            ',' => self.add_token(TokenType::Comma, Literal::Nil),
+            '.' => self.add_token(TokenType::Dot, Literal::Nil),
+            '-' => self.add_token(TokenType::Minus, Literal::Nil),
+            '+' => self.add_token(TokenType::Plus, Literal::Nil),
+            ';' => self.add_token(TokenType::Semicolon, Literal::Nil),
+            '*' => self.add_token(TokenType::Star, Literal::Nil),
             '!' => {
                 if self.match_char('=') {
-                    self.add_token(TokenType::BangEqual, "");
+                    self.add_token(TokenType::BangEqual, Literal::Nil);
                 } else {
-                    self.add_token(TokenType::Bang, "");
+                    self.add_token(TokenType::Bang, Literal::Nil);
                 }
             }
             '=' => {
                 if self.match_char('=') {
-                    self.add_token(TokenType::EqualEqual, "");
+                    self.add_token(TokenType::EqualEqual, Literal::Nil);
                 } else {
-                    self.add_token(TokenType::Equal, "");
+                    self.add_token(TokenType::Equal, Literal::Nil);
                 }
             }
             '<' => {
                 if self.match_char('=') {
-                    self.add_token(TokenType::LessEqual, "");
+                    self.add_token(TokenType::LessEqual, Literal::Nil);
                 } else {
-                    self.add_token(TokenType::Less, "");
+                    self.add_token(TokenType::Less, Literal::Nil);
                 }
             }
             '>' => {
                 if self.match_char('=') {
-                    self.add_token(TokenType::GreaterEqual, "");
+                    self.add_token(TokenType::GreaterEqual, Literal::Nil);
                 } else {
-                    self.add_token(TokenType::Greater, "");
+                    self.add_token(TokenType::Greater, Literal::Nil);
                 }
             }
             '/' => {
@@ -128,7 +129,7 @@ impl Scanner {
                 } else if self.match_char('*') {
                     self.block_comment();
                 } else {
-                    self.add_token(TokenType::Slash, "");
+                    self.add_token(TokenType::Slash, Literal::Nil);
                 }
             }
             ' ' | '\r' | '\t' => (),
@@ -178,10 +179,11 @@ impl Scanner {
         // Trim the surrounding quotes.
         self.add_token(
             TokenType::String,
-            self.source[self.start_index + 1..self.current_index - 1]
-                .iter()
-                .collect::<String>()
-                .as_str(),
+            Literal::String(
+                self.source[self.start_index + 1..self.current_index - 1]
+                    .iter()
+                    .collect::<String>(),
+            ),
         );
     }
 
@@ -200,7 +202,16 @@ impl Scanner {
             }
         }
 
-        self.add_token(TokenType::Number, "");
+        self.add_token(
+            TokenType::Number,
+            Literal::Number(
+                self.source[self.start_index..self.current_index]
+                    .iter()
+                    .collect::<String>()
+                    .parse()
+                    .unwrap(),
+            ),
+        );
     }
 
     fn peek_next(&mut self) -> char {
@@ -225,7 +236,7 @@ impl Scanner {
         if self.keywords.contains_key(text.as_str()) {
             token_type = self.keywords[text.as_str()];
         }
-        self.add_token(token_type, "");
+        self.add_token(token_type, Literal::Nil);
     }
 
     fn block_comment(&mut self) {

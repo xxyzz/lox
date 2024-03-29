@@ -1,5 +1,7 @@
 use std::fmt;
 
+use crate::expr::Literal;
+
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
 pub enum TokenType {
     // Single-character tokens.
@@ -56,12 +58,16 @@ pub enum TokenType {
 pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,
-    pub literal: String,
+    pub literal: Literal,
     pub line_num: usize,
 }
 
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?} {} {}", self.token_type, self.lexeme, self.literal)
+        write!(
+            f,
+            "{:?} {} {:?}",
+            self.token_type, self.lexeme, self.literal
+        )
     }
 }

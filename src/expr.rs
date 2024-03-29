@@ -15,11 +15,12 @@ pub struct Binary {
     pub operator: Token,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Default)]
 pub enum Literal {
+    #[default]
+    Nil,
     Number(f64),
     Bool(bool),
-    Nil,
     String(String),
 }
 
