@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pylox"
+version = "0.1.0"
+authors = [
+    {name = "xxyzz"}
+]
+description = "lox interpreter"
+license = "GPL-3.0-or-later"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
+[project.scripts]
+pylox = "pylox.lox:main"
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle error
+    "F",  # Pyflakes
+    "I",  # isort
+    "W",  # pycodestyle warning
+]
