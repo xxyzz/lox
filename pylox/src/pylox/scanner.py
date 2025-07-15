@@ -1,7 +1,6 @@
 from .token import Token
 from .token_type import TokenType
 
-
 KEYWORDS = {
     "and": TokenType.AND,
     "class": TokenType.CLASS,
@@ -103,7 +102,7 @@ class Scanner:
                 else:
                     from .lox import Lox
 
-                    Lox.error(self.line_num, "Unexpected character.")
+                    Lox.report(self.line_num, "", "Unexpected character.")
 
     def advance(self) -> str:
         char = self.source[self.current_offset]
@@ -136,7 +135,7 @@ class Scanner:
         if self.is_at_end():
             from .lox import Lox
 
-            Lox.error(self.line_num, "Unterminated string.")
+            Lox.report(self.line_num, "", "Unterminated string.")
             return
 
         # The closing "

@@ -1,7 +1,7 @@
-from enum import Enum, auto
+from enum import Flag, auto
 
 
-class TokenType(Enum):
+class TokenType(Flag):
     # Single-character tokens
     LEFT_PAREN = auto()
     RIGHT_PAREN = auto()
