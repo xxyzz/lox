@@ -1,11 +1,13 @@
 import sys
 
+from .expr import LoxRuntimeError, interpret
 from .token import Token
 from .token_type import TokenType
 
 
 class Lox:
-    has_error = False
+    had_error = False
+    had_runtime_error = False
 
     def main(self):
         args = sys.argv
@@ -19,7 +21,7 @@ class Lox:
     def run_file(self, script_path: str):
         with open(script_path) as f:
             self.run(f.read())
-        if Lox.has_error:
+        if Lox.had_error or Lox.had_runtime_error:
             exit(1)
 
     def run_prompt(self):
@@ -27,7 +29,7 @@ class Lox:
             line = input("> ")
             if line != "":
                 self.run(line)
-                Lox.has_error = False
+                Lox.had_error = False
 
     def run(self, source: str):
         from .parser import Parser
@@ -39,10 +41,10 @@ class Lox:
         expression = parser.parse()
 
         # Stop if there was a syntax error
-        if Lox.has_error:
+        if Lox.had_error:
             return
 
-        print(expression)
+        interpret(expression)
 
     @staticmethod
     def error(token: Token, message: str):
@@ -54,7 +56,12 @@ class Lox:
     @staticmethod
     def report(line_num: int, where: str, message: str):
         print(f"[line {line_num}] Error{where}: {message}", file=sys.stderr)
-        Lox.has_error = True
+        Lox.had_error = True
+
+    @staticmethod
+    def runtime_error(error: LoxRuntimeError):
+        print(f"{error.message}\n[line {error.token.line_num}]", file=sys.stderr)
+        Lox.had_runtime_error = True
 
 
 def main():
