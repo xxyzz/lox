@@ -1,4 +1,5 @@
-from .expr import Binary, Expr, Grouping, Literal, Unary
+from .expr import Binary, Expr, Grouping, Literal, Unary, Variable
+from .stmt import Expression, Print, Stmt, Var
 from .token import Token
 from .token_type import TokenType
 
@@ -98,6 +99,7 @@ class Parser:
 
     # primary → NUMBER | STRING | "true" | "false" | "nil"
     #         | "(" expression ")"
+    #         | IDENTIFIER ;
     def primary(self) -> Expr:
         if self.match(TokenType.FALSE):
             return Literal(False)
@@ -114,10 +116,13 @@ class Parser:
             self.consume(TokenType.RIGHT_PAREN, "Expect ')' after expression.")
             return Grouping(expr)
 
+        if self.match(TokenType.IDENTIFIER):
+            return Variable(self.previous())
+
         self.error(self.peek(), "Expect expression.")
 
     def consume(self, type: TokenType, message: str) -> Token:
-        if self.check(TokenType.RIGHT_PAREN):
+        if self.check(type):
             return self.advance()
         self.error(self.peek(), message)
 
@@ -149,8 +154,52 @@ class Parser:
 
             self.advance()
 
-    def parse(self) -> Expr | None:
+    # program → statement* EOF ;
+    def parse(self) -> list[Stmt]:
+        statements = []
+
+        while not self.is_at_end():
+            statements.append(self.declaration())
+
+        return statements
+
+    # declaration → varDecl
+    #             | statement ;
+    def declaration(self) -> Stmt | None:
         try:
-            return self.expression()
+            if self.match(TokenType.VAR):
+                return self.var_declaration()
+            return self.statement()
         except ParseError:
+            self.synchronize()
             return None
+
+    # varDecl → "var" IDENTIFIER ( "=" expression )? ";" ;
+    def var_declaration(self) -> Stmt:
+        name = self.consume(TokenType.IDENTIFIER, "Expect variable name.")
+
+        initializer = None
+        if self.match(TokenType.EQUAL):
+            initializer = self.expression()
+
+        self.consume(TokenType.SEMICOLON, "Expect ';' after variable declaraction.")
+        return Var(name, initializer)
+
+    # statement → exprStmt
+    #           | printStmt;
+    def statement(self) -> Stmt:
+        if self.match(TokenType.PRINT):
+            return self.print_statement()
+        return self.expression_statement()
+
+    # printStmt → "print" expression ";" ;
+    def print_statement(self) -> Stmt:
+        value = self.expression()
+        self.consume(TokenType.SEMICOLON, "Expect ';' after value.")
+        return Print(value)
+
+    # exprStmt → expression ";" ;
+    def expression_statement(self) -> Stmt:
+        value = self.expression()
+        self.consume(TokenType.SEMICOLON, "Expect ';' after expression.")
+        return Expression(value)

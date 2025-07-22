@@ -1,6 +1,6 @@
 import sys
 
-from .expr import LoxRuntimeError, interpret
+from .interpreter import Interpreter, LoxRuntimeError
 from .token import Token
 from .token_type import TokenType
 
@@ -38,13 +38,14 @@ class Lox:
         scanner = Scanner(source)
         tokens = scanner.scan_tokens()
         parser = Parser(tokens)
-        expression = parser.parse()
+        statements = parser.parse()
 
         # Stop if there was a syntax error
         if Lox.had_error:
             return
 
-        interpret(expression)
+        interpreter = Interpreter()
+        interpreter.interpret(statements)
 
     @staticmethod
     def error(token: Token, message: str):
