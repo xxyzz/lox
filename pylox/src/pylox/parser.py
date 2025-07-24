@@ -1,5 +1,5 @@
-from .expr import Binary, Expr, Grouping, Literal, Unary, Variable
-from .stmt import Expression, Print, Stmt, Var
+from .expr import Assign, Binary, Expr, Grouping, Literal, Unary, Variable
+from .stmt import Block, Expression, Print, Stmt, Var
 from .token import Token
 from .token_type import TokenType
 
@@ -38,9 +38,24 @@ class Parser:
     def previous(self) -> Token:
         return self.tokens[self.current - 1]
 
-    # expression → equality
+    # expression → assignment ;
     def expression(self) -> Expr:
-        return self.equality()
+        return self.assignment()
+
+    # assignment → IDENTIFIER "=" assignment
+    #            | equality ;
+    def assignment(self) -> Expr:
+        expr = self.equality()
+
+        if self.match(TokenType.EQUAL):
+            equals = self.previous()
+            value = self.assignment()
+            if isinstance(expr, Variable):
+                name = expr.name
+                return Assign(name, value)
+            self.error(equals, "Invalid assignment target.")
+
+        return expr
 
     # equality → comparison ( ( "!=" | "==" ) comparison )*
     def equality(self) -> Expr:
@@ -186,10 +201,13 @@ class Parser:
         return Var(name, initializer)
 
     # statement → exprStmt
-    #           | printStmt;
+    #           | printStmt
+    #           | block;
     def statement(self) -> Stmt:
         if self.match(TokenType.PRINT):
             return self.print_statement()
+        if self.match(TokenType.LEFT_BRACE):
+            return Block(self.block())
         return self.expression_statement()
 
     # printStmt → "print" expression ";" ;
@@ -203,3 +221,11 @@ class Parser:
         value = self.expression()
         self.consume(TokenType.SEMICOLON, "Expect ';' after expression.")
         return Expression(value)
+
+    # block → "{" declaration* "}" ;
+    def block(self) -> list[Stmt]:
+        statements = []
+        while not self.check(TokenType.RIGHT_BRACE) and not self.is_at_end():
+            statements.append(self.declaration())
+        self.consume(TokenType.RIGHT_BRACE, "Expect '}' after block.")
+        return statements

@@ -14,6 +14,12 @@ class Expr:
 
 
 @dataclass
+class Assign:
+    name: Token
+    value: Expr
+
+
+@dataclass
 class Binary(Expr):
     left: Expr
     operator: Token

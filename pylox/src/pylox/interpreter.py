@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
 from .environment import Environment
-from .expr import Binary, Expr, Grouping, Literal, Unary, Variable
-from .stmt import Expression, Print, Stmt, Var
+from .expr import Assign, Binary, Expr, Grouping, Literal, Unary, Variable
+from .stmt import Block, Expression, Print, Stmt, Var
 from .token import Token
 from .token_type import TokenType
 
@@ -42,6 +42,8 @@ class Interpreter:
             self.execute_print(stmt)
         elif isinstance(stmt, Var):
             self.execute_var(stmt)
+        elif isinstance(stmt, Block):
+            self.execute_block(stmt.statements, Environment(self.environment))
 
     def execute_print(self, stmt: Print):
         value = self.evaluate(stmt.expression)
@@ -52,6 +54,15 @@ class Interpreter:
         if stmt.initializer is not None:
             value = self.evaluate(stmt.initializer)
         self.environment.define(stmt.name.lexeme, value)
+
+    def execute_block(self, statements: list[Stmt], environment: Environment):
+        previous = self.environment
+        try:
+            self.environment = environment
+            for stmt in statements:
+                self.execute(stmt)
+        finally:
+            self.environment = previous
 
     def evaluate(self, expr: Expr):
         if isinstance(expr, Binary):
@@ -64,6 +75,8 @@ class Interpreter:
             return self.evaluate_unary(expr)
         elif isinstance(expr, Variable):
             return self.evaluate_variable(expr)
+        elif isinstance(expr, Assign):
+            return self.evaluate_assign(expr)
 
     def evaluate_binary(self, expr: Binary):
         left = self.evaluate(expr.left)
@@ -120,6 +133,11 @@ class Interpreter:
 
     def evaluate_variable(self, expr: Variable):
         return self.environment.get(expr.name)
+
+    def evaluate_assign(self, expr: Assign):
+        value = self.evaluate(expr.value)
+        self.environment.assign(expr.name, value)
+        return value
 
     def is_truthy(self, obj) -> bool:
         if obj is None:
