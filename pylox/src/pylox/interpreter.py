@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
 from .environment import Environment
-from .expr import Assign, Binary, Expr, Grouping, Literal, Unary, Variable
-from .stmt import Block, Expression, Print, Stmt, Var
+from .expr import Assign, Binary, Expr, Grouping, Literal, Logical, Unary, Variable
+from .stmt import Block, Expression, If, Print, Stmt, Var, While
 from .token import Token
 from .token_type import TokenType
 
@@ -44,6 +44,10 @@ class Interpreter:
             self.execute_var(stmt)
         elif isinstance(stmt, Block):
             self.execute_block(stmt.statements, Environment(self.environment))
+        elif isinstance(stmt, If):
+            self.execute_if(stmt)
+        elif isinstance(stmt, While):
+            self.execute_while(stmt)
 
     def execute_print(self, stmt: Print):
         value = self.evaluate(stmt.expression)
@@ -64,6 +68,16 @@ class Interpreter:
         finally:
             self.environment = previous
 
+    def execute_if(self, stmt: If):
+        if self.is_truthy(self.evaluate(stmt.condition)):
+            self.execute(stmt.then_branch)
+        elif stmt.else_branch is not None:
+            self.execute(stmt.else_branch)
+
+    def execute_while(self, stmt: While):
+        while self.is_truthy(self.evaluate(stmt.condition)):
+            self.execute(stmt.body)
+
     def evaluate(self, expr: Expr):
         if isinstance(expr, Binary):
             return self.evaluate_binary(expr)
@@ -77,6 +91,8 @@ class Interpreter:
             return self.evaluate_variable(expr)
         elif isinstance(expr, Assign):
             return self.evaluate_assign(expr)
+        elif isinstance(expr, Logical):
+            return self.evaluete_logical(expr)
 
     def evaluate_binary(self, expr: Binary):
         left = self.evaluate(expr.left)
@@ -138,6 +154,16 @@ class Interpreter:
         value = self.evaluate(expr.value)
         self.environment.assign(expr.name, value)
         return value
+
+    def evaluete_logical(self, expr: Logical):
+        left = self.evaluate(expr.left)
+        if expr.operator.type == TokenType.OR:
+            if self.is_truthy(left):
+                return left
+        elif not self.is_truthy(left):
+            return left
+
+        return self.evaluate(expr.right)
 
     def is_truthy(self, obj) -> bool:
         if obj is None:
