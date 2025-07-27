@@ -9,8 +9,27 @@ class Stmt:
 
 
 @dataclass
+class Block(Stmt):
+    statements: list[Stmt]
+
+
+@dataclass
 class Expression(Stmt):
     expression: Expr
+
+
+@dataclass
+class Function(Stmt):
+    name: Token
+    params: list[Token]
+    body: list[Stmt]
+
+
+@dataclass
+class If(Stmt):
+    condition: Expr
+    then_branch: Stmt
+    else_branch: Stmt
 
 
 @dataclass
@@ -19,21 +38,15 @@ class Print(Stmt):
 
 
 @dataclass
+class Return(Stmt):
+    keyword: Token
+    value: Expr
+
+
+@dataclass
 class Var(Stmt):
     name: Token
     initializer: Expr | None
-
-
-@dataclass
-class Block(Stmt):
-    statements: list[Stmt]
-
-
-@dataclass
-class If(Stmt):
-    condition: Expr
-    then_branch: Stmt
-    else_branch: Stmt
 
 
 @dataclass

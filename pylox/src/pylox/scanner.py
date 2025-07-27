@@ -141,7 +141,7 @@ class Scanner:
         # The closing "
         self.advance()
         # Trim the surrounding quotes
-        value = self.source[self.start_offset + 1 : self.current_offset - 1].strip()
+        value = self.source[self.start_offset + 1 : self.current_offset - 1]
         self.add_token(TokenType.STRING, value)
 
     def is_digit(self, char: str) -> bool:

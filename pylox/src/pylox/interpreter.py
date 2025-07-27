@@ -1,8 +1,21 @@
 from dataclasses import dataclass
+from typing import Any
 
 from .environment import Environment
-from .expr import Assign, Binary, Expr, Grouping, Literal, Logical, Unary, Variable
-from .stmt import Block, Expression, If, Print, Stmt, Var, While
+from .expr import (
+    Assign,
+    Binary,
+    Call,
+    Expr,
+    Grouping,
+    Literal,
+    Logical,
+    Unary,
+    Variable,
+)
+from .loxcallable import LoxCallable
+from .loxfunction import LoxFunction
+from .stmt import Block, Expression, Function, If, Print, Return, Stmt, Var, While
 from .token import Token
 from .token_type import TokenType
 
@@ -13,8 +26,16 @@ class LoxRuntimeError(RuntimeError):
     message: str
 
 
+@dataclass
+class ReturnException(RuntimeError):
+    value: Any
+
+
 class Interpreter:
-    environment = Environment()
+    def __init__(self):
+        self.globals = Environment()
+        self.globals.define("clock", Clock())
+        self.environment = self.globals
 
     def interpret(self, statements: list[Stmt]):
         try:
@@ -48,6 +69,10 @@ class Interpreter:
             self.execute_if(stmt)
         elif isinstance(stmt, While):
             self.execute_while(stmt)
+        elif isinstance(stmt, Function):
+            self.execute_function(stmt)
+        elif isinstance(stmt, Return):
+            self.execute_return(stmt)
 
     def execute_print(self, stmt: Print):
         value = self.evaluate(stmt.expression)
@@ -78,6 +103,16 @@ class Interpreter:
         while self.is_truthy(self.evaluate(stmt.condition)):
             self.execute(stmt.body)
 
+    def execute_function(self, stmt: Function):
+        function = LoxFunction(stmt, self.environment)
+        self.environment.define(stmt.name.lexeme, function)
+
+    def execute_return(self, stmt: Return):
+        value = None
+        if stmt.value is not None:
+            value = self.evaluate(stmt.value)
+        raise ReturnException(value)
+
     def evaluate(self, expr: Expr):
         if isinstance(expr, Binary):
             return self.evaluate_binary(expr)
@@ -92,7 +127,9 @@ class Interpreter:
         elif isinstance(expr, Assign):
             return self.evaluate_assign(expr)
         elif isinstance(expr, Logical):
-            return self.evaluete_logical(expr)
+            return self.evaluate_logical(expr)
+        elif isinstance(expr, Call):
+            return self.evaluate_call(expr)
 
     def evaluate_binary(self, expr: Binary):
         left = self.evaluate(expr.left)
@@ -155,7 +192,7 @@ class Interpreter:
         self.environment.assign(expr.name, value)
         return value
 
-    def evaluete_logical(self, expr: Logical):
+    def evaluate_logical(self, expr: Logical):
         left = self.evaluate(expr.left)
         if expr.operator.type == TokenType.OR:
             if self.is_truthy(left):
@@ -164,6 +201,20 @@ class Interpreter:
             return left
 
         return self.evaluate(expr.right)
+
+    def evaluate_call(self, expr: Call):
+        callee = self.evaluate(expr.callee)
+        arguments = []
+        for argument in expr.arguments:
+            arguments.append(self.evaluate(argument))
+        if not isinstance(callee, LoxCallable):
+            raise LoxRuntimeError(expr.paren, "Can only call functions and classes.")
+        if len(arguments) != callee.arity():
+            raise LoxRuntimeError(
+                expr.paren,
+                f"Expected {callee.arity()} arguments but got {len(arguments)}.",
+            )
+        return callee.call(self, arguments)
 
     def is_truthy(self, obj) -> bool:
         if obj is None:
@@ -188,3 +239,19 @@ class Interpreter:
         if isinstance(left, float) and isinstance(right, float):
             return
         raise LoxRuntimeError(operator, "Operand must be a number.")
+
+
+class Clock(LoxCallable):
+    def arity(self):
+        return 0
+
+    def call(self, interpreter: Interpreter, arguments):
+        import time
+
+        return time.time()
+
+    def __str__(self):
+        return "<native fn>"
+
+    def __repr__(self):
+        return self.__str__()
