@@ -36,6 +36,7 @@ class Interpreter:
         self.globals = Environment()
         self.globals.define("clock", Clock())
         self.environment = self.globals
+        self.locals: dict[Expr, int] = {}
 
     def interpret(self, statements: list[Stmt]):
         try:
@@ -185,12 +186,22 @@ class Interpreter:
         return None
 
     def evaluate_variable(self, expr: Variable):
-        return self.environment.get(expr.name)
+        return self.look_up_variable(expr.name, expr)
+
+    def look_up_variable(self, name: Token, expr: Expr):
+        distance = self.locals.get(expr)
+        if distance is not None:
+            return self.environment.get_at(distance, name.lexeme)
+        return self.globals.get(name)
 
     def evaluate_assign(self, expr: Assign):
         value = self.evaluate(expr.value)
-        self.environment.assign(expr.name, value)
-        return value
+
+        distance = self.locals.get(expr)
+        if distance is not None:
+            self.environment.assign_at(distance, expr.name, value)
+        else:
+            self.globals.assign(expr.name, value)
 
     def evaluate_logical(self, expr: Logical):
         left = self.evaluate(expr.left)
@@ -239,6 +250,9 @@ class Interpreter:
         if isinstance(left, float) and isinstance(right, float):
             return
         raise LoxRuntimeError(operator, "Operand must be a number.")
+
+    def resolve(self, expr: Expr, depth: int):
+        self.locals[expr] = depth
 
 
 class Clock(LoxCallable):

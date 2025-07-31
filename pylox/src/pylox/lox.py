@@ -21,7 +21,7 @@ class Lox:
     def run_file(self, script_path: str):
         with open(script_path) as f:
             self.run(f.read())
-        if Lox.had_error or Lox.had_runtime_error:
+        if self.had_error or self.had_runtime_error:
             exit(1)
 
     def run_prompt(self):
@@ -29,22 +29,25 @@ class Lox:
             line = input("> ")
             if line != "":
                 self.run(line)
-                Lox.had_error = False
+                self.had_error = False
 
     def run(self, source: str):
         from .parser import Parser
+        from .resolver import Resolver
         from .scanner import Scanner
 
         scanner = Scanner(source)
         tokens = scanner.scan_tokens()
         parser = Parser(tokens)
         statements = parser.parse()
-
         # Stop if there was a syntax error
-        if Lox.had_error:
+        if self.had_error:
             return
-
         interpreter = Interpreter()
+        resolver = Resolver(interpreter)
+        resolver.resolve_statements(statements)
+        if self.had_error:
+            return
         interpreter.interpret(statements)
 
     @staticmethod

@@ -13,13 +13,13 @@ class Expr:
         return s
 
 
-@dataclass
+@dataclass(frozen=True)
 class Assign:
     name: Token
     value: Expr
 
 
-@dataclass
+@dataclass(frozen=True)
 class Binary(Expr):
     left: Expr
     operator: Token
@@ -29,14 +29,14 @@ class Binary(Expr):
         return self.parenthesize(self.operator.lexeme, [self.left, self.right])
 
 
-@dataclass
+@dataclass(frozen=True)
 class Call(Expr):
     callee: Expr
     paren: Token
     arguments: list[Expr]
 
 
-@dataclass
+@dataclass(frozen=True)
 class Grouping(Expr):
     expression: Expr
 
@@ -44,7 +44,7 @@ class Grouping(Expr):
         return self.parenthesize("group", [self.expression])
 
 
-@dataclass
+@dataclass(frozen=True)
 class Literal(Expr):
     value: Any
 
@@ -52,14 +52,14 @@ class Literal(Expr):
         return str(self.value) if self.value is not None else "nil"
 
 
-@dataclass
+@dataclass(frozen=True)
 class Logical(Expr):
     left: Expr
     operator: Token
     right: Expr
 
 
-@dataclass
+@dataclass(frozen=True)
 class Unary(Expr):
     operator: Token
     right: Expr
@@ -68,6 +68,6 @@ class Unary(Expr):
         return self.parenthesize(self.operator.lexeme, [self.right])
 
 
-@dataclass
+@dataclass(frozen=True)
 class Variable(Expr):
     name: Token
