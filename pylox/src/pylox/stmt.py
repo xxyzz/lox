@@ -53,3 +53,9 @@ class Var(Stmt):
 class While(Stmt):
     condition: Expr
     body: Stmt
+
+
+@dataclass
+class Class(Stmt):
+    name: Token
+    methods: list[Function]

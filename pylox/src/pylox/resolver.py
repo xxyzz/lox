@@ -1,13 +1,43 @@
 from enum import Enum, auto
 
-from .expr import Assign, Binary, Call, Expr, Grouping, Logical, Unary, Variable
-from .stmt import Block, Expression, Function, If, Print, Return, Stmt, Var, While
+from .expr import (
+    Assign,
+    Binary,
+    Call,
+    Expr,
+    Get,
+    Grouping,
+    Logical,
+    Set,
+    This,
+    Unary,
+    Variable,
+)
+from .stmt import (
+    Block,
+    Class,
+    Expression,
+    Function,
+    If,
+    Print,
+    Return,
+    Stmt,
+    Var,
+    While,
+)
 from .token import Token
 
 
 class FunctionType(Enum):
     NONE = auto()
     FUNCTION = auto()
+    INITIALIZER = auto()
+    METHOD = auto()
+
+
+class ClassType(Enum):
+    NONE = auto()
+    CLASS = auto()
 
 
 class Resolver:
@@ -15,6 +45,7 @@ class Resolver:
         self.interpreter = interpreter
         self.scopes: list[dict[str, bool]] = []
         self.current_function = FunctionType.NONE
+        self.current_class = ClassType.NONE
 
     def resolve_block(self, stmt: Block):
         self.begin_scope()
@@ -39,7 +70,7 @@ class Resolver:
         elif isinstance(statement, Expression):
             self.resolve_expression(statement)
         elif isinstance(statement, Function):
-            self.resolve_function(statement)
+            self.resolve_function(statement, FunctionType.FUNCTION)
         elif isinstance(statement, If):
             self.resolve_if(statement)
         elif isinstance(statement, Print):
@@ -48,6 +79,8 @@ class Resolver:
             self.resolve_return(statement)
         elif isinstance(statement, While):
             self.resolve_while(statement)
+        elif isinstance(statement, Class):
+            self.resolve_class(statement)
 
     def resolve_expr(self, expr: Expr):
         if isinstance(expr, Variable):
@@ -64,6 +97,12 @@ class Resolver:
             self.resolve_logical(expr)
         elif isinstance(expr, Unary):
             self.resolve_unary(expr)
+        elif isinstance(expr, Get):
+            self.resolve_get(expr)
+        elif isinstance(expr, Set):
+            self.resolve_set(expr)
+        elif isinstance(expr, This):
+            self.resolve_this(expr)
 
     def declare(self, name: Token):
         if len(self.scopes) == 0:
@@ -105,11 +144,11 @@ class Resolver:
         self.resolve_expr(expr.value)
         self.resolve_local(expr, expr.name)
 
-    def resolve_function(self, stmt: Function):
+    def resolve_function(self, stmt: Function, function_type: FunctionType):
         self.declare(stmt.name)
         self.define(stmt.name)
         enclosing_function = self.current_function
-        self.current_function = FunctionType.FUNCTION
+        self.current_function = function_type
         self.begin_scope()
         for param in stmt.params:
             self.declare(param)
@@ -131,12 +170,13 @@ class Resolver:
         self.resolve_expr(stmt.expression)
 
     def resolve_return(self, stmt: Return):
+        from .lox import Lox
+
         if self.current_function == FunctionType.NONE:
-            from .lox import Lox
-
             Lox.error(stmt.keyword, "Can't return from top-level code.")
-
         if stmt.value is not None:
+            if self.current_function == FunctionType.INITIALIZER:
+                Lox.error(stmt.keyword, "Can't return a value from an initializer.")
             self.resolve_expr(stmt.value)
 
     def resolve_while(self, stmt: While):
@@ -161,3 +201,33 @@ class Resolver:
 
     def resolve_unary(self, expr: Unary):
         self.resolve_expr(expr.right)
+
+    def resolve_class(self, stmt: Class):
+        enclosing_class = self.current_class
+        self.current_class = ClassType.CLASS
+        self.declare(stmt.name)
+        self.define(stmt.name)
+        self.begin_scope()
+        self.scopes[-1]["this"] = True
+        for method in stmt.methods:
+            declaration = FunctionType.METHOD
+            if method.name.lexeme == "init":
+                declaration = FunctionType.INITIALIZER
+            self.resolve_function(method, declaration)
+        self.end_scope()
+        self.current_class = enclosing_class
+
+    def resolve_get(self, expr: Get):
+        self.resolve_expr(expr.object)
+
+    def resolve_set(self, expr: Set):
+        self.resolve_expr(expr.value)
+        self.resolve_expr(expr.object)
+
+    def resolve_this(self, expr: This):
+        if self.current_class != ClassType.CLASS:
+            from .lox import Lox
+
+            Lox.error(expr.keyword, "Can't use 'this' outside of a class.")
+        else:
+            self.resolve_local(expr, expr.keyword)

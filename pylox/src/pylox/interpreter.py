@@ -7,15 +7,31 @@ from .expr import (
     Binary,
     Call,
     Expr,
+    Get,
     Grouping,
     Literal,
     Logical,
+    Set,
+    This,
     Unary,
     Variable,
 )
 from .loxcallable import LoxCallable
+from .loxclass import LoxClass
 from .loxfunction import LoxFunction
-from .stmt import Block, Expression, Function, If, Print, Return, Stmt, Var, While
+from .loxinstance import LoxInstance
+from .stmt import (
+    Block,
+    Class,
+    Expression,
+    Function,
+    If,
+    Print,
+    Return,
+    Stmt,
+    Var,
+    While,
+)
 from .token import Token
 from .token_type import TokenType
 
@@ -74,6 +90,8 @@ class Interpreter:
             self.execute_function(stmt)
         elif isinstance(stmt, Return):
             self.execute_return(stmt)
+        elif isinstance(stmt, Class):
+            self.execute_class(stmt)
 
     def execute_print(self, stmt: Print):
         value = self.evaluate(stmt.expression)
@@ -105,7 +123,7 @@ class Interpreter:
             self.execute(stmt.body)
 
     def execute_function(self, stmt: Function):
-        function = LoxFunction(stmt, self.environment)
+        function = LoxFunction(stmt, self.environment, False)
         self.environment.define(stmt.name.lexeme, function)
 
     def execute_return(self, stmt: Return):
@@ -113,6 +131,17 @@ class Interpreter:
         if stmt.value is not None:
             value = self.evaluate(stmt.value)
         raise ReturnException(value)
+
+    def execute_class(self, stmt: Class):
+        self.environment.define(stmt.name.lexeme, None)
+        methods = {}
+        for method in stmt.methods:
+            function = LoxFunction(
+                method, self.environment, method.name.lexeme == "init"
+            )
+            methods[method.name.lexeme] = function
+        klass = LoxClass(stmt.name.lexeme, methods)
+        self.environment.assign(stmt.name, klass)
 
     def evaluate(self, expr: Expr):
         if isinstance(expr, Binary):
@@ -131,6 +160,12 @@ class Interpreter:
             return self.evaluate_logical(expr)
         elif isinstance(expr, Call):
             return self.evaluate_call(expr)
+        elif isinstance(expr, Get):
+            return self.evaluate_get(expr)
+        elif isinstance(expr, Set):
+            return self.evaluate_set(expr)
+        elif isinstance(expr, This):
+            return self.evaluate_this(expr)
 
     def evaluate_binary(self, expr: Binary):
         left = self.evaluate(expr.left)
@@ -226,6 +261,23 @@ class Interpreter:
                 f"Expected {callee.arity()} arguments but got {len(arguments)}.",
             )
         return callee.call(self, arguments)
+
+    def evaluate_get(self, expr: Get):
+        object = self.evaluate(expr.object)
+        if isinstance(object, LoxInstance):
+            return object.get(expr.name)
+        raise LoxRuntimeError(expr.name, "Only instances have properties.")
+
+    def evaluate_set(self, expr: Set):
+        object = self.evaluate(expr.object)
+        if not isinstance(object, LoxInstance):
+            raise LoxRuntimeError(expr.name, "Only instances have fields.")
+        value = self.evaluate(expr.value)
+        object.set(expr.name, value)
+        return value
+
+    def evaluate_this(self, expr: This):
+        return self.look_up_variable(expr.keyword, expr)
 
     def is_truthy(self, obj) -> bool:
         if obj is None:

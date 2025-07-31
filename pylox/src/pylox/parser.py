@@ -3,13 +3,27 @@ from .expr import (
     Binary,
     Call,
     Expr,
+    Get,
     Grouping,
     Literal,
     Logical,
+    Set,
+    This,
     Unary,
     Variable,
 )
-from .stmt import Block, Expression, Function, If, Print, Return, Stmt, Var, While
+from .stmt import (
+    Block,
+    Class,
+    Expression,
+    Function,
+    If,
+    Print,
+    Return,
+    Stmt,
+    Var,
+    While,
+)
 from .token import Token
 from .token_type import TokenType
 
@@ -52,7 +66,7 @@ class Parser:
     def expression(self) -> Expr:
         return self.assignment()
 
-    # assignment → IDENTIFIER "=" assignment
+    # assignment → ( call "." )? IDENTIFIER "=" assignment
     #            | logic_or ;
     def assignment(self) -> Expr:
         expr = self.logic_or()
@@ -63,6 +77,9 @@ class Parser:
             if isinstance(expr, Variable):
                 name = expr.name
                 return Assign(name, value)
+            elif isinstance(expr, Get):
+                return Set(expr.object, expr.name, value)
+
             self.error(equals, "Invalid assignment target.")
 
         return expr
@@ -141,12 +158,17 @@ class Parser:
             return Unary(operator, right)
         return self.call()
 
-    # call → primary ( "(" arguments? ")" )* ;
+    # call → primary ( "(" arguments? ")" | "." IDENTIFIER )* ;
     def call(self) -> Expr:
         expr = self.primary()
         while True:
             if self.match(TokenType.LEFT_PAREN):
                 expr = self.finish_call(expr)
+            elif self.match(TokenType.DOT):
+                name = self.consume(
+                    TokenType.IDENTIFIER, "Expect property name after '.'."
+                )
+                expr = Get(expr, name)
             else:
                 break
         return expr
@@ -181,6 +203,9 @@ class Parser:
             expr = self.expression()
             self.consume(TokenType.RIGHT_PAREN, "Expect ')' after expression.")
             return Grouping(expr)
+
+        if self.match(TokenType.THIS):
+            return This(self.previous())
 
         if self.match(TokenType.IDENTIFIER):
             return Variable(self.previous())
@@ -229,11 +254,14 @@ class Parser:
 
         return statements
 
-    # declaration → funDecl
+    # declaration → classDecl
+    #             | funDecl
     #             | varDecl
     #             | statement ;
     def declaration(self) -> Stmt | None:
         try:
+            if self.match(TokenType.CLASS):
+                return self.class_declaration()
             if self.match(TokenType.FUN):
                 return self.function("function")
             if self.match(TokenType.VAR):
@@ -242,6 +270,18 @@ class Parser:
         except ParseError:
             self.synchronize()
             return None
+
+    # classDecl → "class" IDENTIFIER "{" function* "}" ;
+    def class_declaration(self) -> Stmt:
+        name = self.consume(TokenType.IDENTIFIER, "Expect class name.")
+        self.consume(TokenType.LEFT_BRACE, "Expect '{' before class body.")
+
+        methods = []
+        while not self.check(TokenType.RIGHT_BRACE) and not self.is_at_end():
+            methods.append(self.function("method"))
+
+        self.consume(TokenType.RIGHT_BRACE, "Expect '}' after class body.")
+        return Class(name, methods)
 
     # funDecl → "fun" function ;
     # function → IDENTIFIER "(" parameters? ")" block ;
