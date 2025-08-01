@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from .expr import Expr
+from .expr import Expr, Variable
 from .token import Token
 
 
@@ -58,4 +58,5 @@ class While(Stmt):
 @dataclass
 class Class(Stmt):
     name: Token
+    superclass: Variable | None
     methods: list[Function]

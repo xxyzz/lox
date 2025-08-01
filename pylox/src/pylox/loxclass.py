@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 from .loxcallable import LoxCallable
@@ -7,6 +9,7 @@ from .loxfunction import LoxFunction
 @dataclass
 class LoxClass(LoxCallable):
     name: str
+    superclass: LoxClass | None
     methods: dict[str, LoxFunction]
 
     def __str__(self):
@@ -28,4 +31,7 @@ class LoxClass(LoxCallable):
         return initializer.arity()
 
     def find_method(self, name: str) -> LoxFunction | None:
-        return self.methods.get(name)
+        if name in self.methods:
+            return self.methods[name]
+        if self.superclass is not None:
+            return self.superclass.find_method(name)

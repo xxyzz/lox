@@ -8,6 +8,7 @@ from .expr import (
     Literal,
     Logical,
     Set,
+    Super,
     This,
     Unary,
     Variable,
@@ -185,9 +186,9 @@ class Parser:
         paren = self.consume(TokenType.RIGHT_PAREN, "Expect ')' after arguments.")
         return Call(callee, paren, arguments)
 
-    # primary → NUMBER | STRING | "true" | "false" | "nil"
-    #         | "(" expression ")"
-    #         | IDENTIFIER ;
+    # primary → "true" | "false" | "nil" | "this"
+    #         | NUMBER | STRING | IDENTIFIER | "(" expression ")"
+    #         | "super" "." IDENTIFIER ;
     def primary(self) -> Expr:
         if self.match(TokenType.FALSE):
             return Literal(False)
@@ -198,6 +199,14 @@ class Parser:
 
         if self.match(TokenType.NUMBER | TokenType.STRING):
             return Literal(self.previous().literal)
+
+        if self.match(TokenType.SUPER):
+            keyword = self.previous()
+            self.consume(TokenType.DOT, "Expect '.' after 'super'.")
+            method = self.consume(
+                TokenType.IDENTIFIER, "Expect superclass method name."
+            )
+            return Super(keyword, method)
 
         if self.match(TokenType.LEFT_PAREN):
             expr = self.expression()
@@ -271,17 +280,23 @@ class Parser:
             self.synchronize()
             return None
 
-    # classDecl → "class" IDENTIFIER "{" function* "}" ;
+    # classDecl → "class" IDENTIFIER ( "<" IDENTIFIER )?
+    #             "{" function* "}" ;
     def class_declaration(self) -> Stmt:
         name = self.consume(TokenType.IDENTIFIER, "Expect class name.")
-        self.consume(TokenType.LEFT_BRACE, "Expect '{' before class body.")
 
+        superclass = None
+        if self.match(TokenType.LESS):
+            self.consume(TokenType.IDENTIFIER, "Expect superclass name.")
+            superclass = Variable(self.previous())
+
+        self.consume(TokenType.LEFT_BRACE, "Expect '{' before class body.")
         methods = []
         while not self.check(TokenType.RIGHT_BRACE) and not self.is_at_end():
             methods.append(self.function("method"))
 
         self.consume(TokenType.RIGHT_BRACE, "Expect '}' after class body.")
-        return Class(name, methods)
+        return Class(name, superclass, methods)
 
     # funDecl → "fun" function ;
     # function → IDENTIFIER "(" parameters? ")" block ;

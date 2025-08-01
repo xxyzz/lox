@@ -9,6 +9,7 @@ from .expr import (
     Grouping,
     Logical,
     Set,
+    Super,
     This,
     Unary,
     Variable,
@@ -38,6 +39,7 @@ class FunctionType(Enum):
 class ClassType(Enum):
     NONE = auto()
     CLASS = auto()
+    SUBCLASS = auto()
 
 
 class Resolver:
@@ -103,6 +105,8 @@ class Resolver:
             self.resolve_set(expr)
         elif isinstance(expr, This):
             self.resolve_this(expr)
+        elif isinstance(expr, Super):
+            self.resolve_super(expr)
 
     def declare(self, name: Token):
         if len(self.scopes) == 0:
@@ -207,6 +211,20 @@ class Resolver:
         self.current_class = ClassType.CLASS
         self.declare(stmt.name)
         self.define(stmt.name)
+
+        if (
+            stmt.superclass is not None
+            and stmt.name.lexeme == stmt.superclass.name.lexeme
+        ):
+            from .lox import Lox
+
+            Lox.error(stmt.superclass.name, "A class can't inherit from itself.")
+        if stmt.superclass is not None:
+            self.current_class = ClassType.SUBCLASS
+            self.resolve_expr(stmt.superclass)
+            self.begin_scope()
+            self.scopes[-1]["super"] = True
+
         self.begin_scope()
         self.scopes[-1]["this"] = True
         for method in stmt.methods:
@@ -215,6 +233,8 @@ class Resolver:
                 declaration = FunctionType.INITIALIZER
             self.resolve_function(method, declaration)
         self.end_scope()
+        if stmt.superclass is not None:
+            self.end_scope()
         self.current_class = enclosing_class
 
     def resolve_get(self, expr: Get):
@@ -231,3 +251,13 @@ class Resolver:
             Lox.error(expr.keyword, "Can't use 'this' outside of a class.")
         else:
             self.resolve_local(expr, expr.keyword)
+
+    def resolve_super(self, expr: Super):
+        from .lox import Lox
+
+        if self.current_class == ClassType.NONE:
+            Lox.error(expr.keyword, "Can't use 'super' outside of a class.")
+        elif self.current_class != ClassType.SUBCLASS:
+            Lox.error(expr.keyword, "Can't use 'super' in a class with no superclass.")
+
+        self.resolve_local(expr, expr.keyword)

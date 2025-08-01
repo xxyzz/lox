@@ -73,6 +73,12 @@ class Set(Expr):
 
 
 @dataclass(frozen=True)
+class Super(Expr):
+    keyword: Token
+    method: Token
+
+
+@dataclass(frozen=True)
 class This(Expr):
     keyword: Token
 

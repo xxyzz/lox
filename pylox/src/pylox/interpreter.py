@@ -12,6 +12,7 @@ from .expr import (
     Literal,
     Logical,
     Set,
+    Super,
     This,
     Unary,
     Variable,
@@ -133,14 +134,27 @@ class Interpreter:
         raise ReturnException(value)
 
     def execute_class(self, stmt: Class):
+        superclass = None
+        if stmt.superclass is not None:
+            superclass = self.evaluate_variable(stmt.superclass)
+            if not isinstance(superclass, LoxClass):
+                raise LoxRuntimeError(
+                    stmt.superclass.name, "Superclass must be a class."
+                )
+
         self.environment.define(stmt.name.lexeme, None)
+        if superclass is not None:
+            self.environment = Environment(self.environment)
+            self.environment.define("super", superclass)
         methods = {}
         for method in stmt.methods:
             function = LoxFunction(
                 method, self.environment, method.name.lexeme == "init"
             )
             methods[method.name.lexeme] = function
-        klass = LoxClass(stmt.name.lexeme, methods)
+        klass = LoxClass(stmt.name.lexeme, superclass, methods)
+        if superclass is not None:
+            self.environment = self.environment.enclosing
         self.environment.assign(stmt.name, klass)
 
     def evaluate(self, expr: Expr):
@@ -166,6 +180,8 @@ class Interpreter:
             return self.evaluate_set(expr)
         elif isinstance(expr, This):
             return self.evaluate_this(expr)
+        elif isinstance(expr, Super):
+            return self.evaluate_super(expr)
 
     def evaluate_binary(self, expr: Binary):
         left = self.evaluate(expr.left)
@@ -278,6 +294,17 @@ class Interpreter:
 
     def evaluate_this(self, expr: This):
         return self.look_up_variable(expr.keyword, expr)
+
+    def evaluate_super(self, expr: Super):
+        distance = self.locals[expr]
+        superclass = self.environment.get_at(distance, "super")
+        object = self.environment.get_at(distance - 1, "this")
+        method = superclass.find_method(expr.method.lexeme)
+        if method is None:
+            raise LoxRuntimeError(
+                expr.method, f"Undefined property '{expr.method.lexeme}'."
+            )
+        return method.bind(object)
 
     def is_truthy(self, obj) -> bool:
         if obj is None:
