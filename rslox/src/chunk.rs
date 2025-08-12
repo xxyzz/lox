@@ -3,7 +3,12 @@ use crate::value::Value;
 #[derive(Debug, Clone, Copy)]
 pub enum OpCode {
     OpConstant(usize),
+    OpNegate,
     OpReturn,
+    OpAdd,
+    OpSubtract,
+    OpMultiply,
+    OpDivide,
 }
 
 pub struct Chunk {

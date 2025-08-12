@@ -4,18 +4,27 @@ use crate::value::print_value;
 pub fn disassemble_chunk(chunk: &Chunk, name: &str) {
     println!("== {name} ==");
 
-    for (offset, instruction) in chunk.code.iter().enumerate() {
-        print!("{offset:04} ");
-        if offset > 0 && chunk.lines[offset] == chunk.lines[offset - 1] {
-            print!("   | ");
-        } else {
-            print!("{:04} ", chunk.lines[offset]);
-        }
+    for index in 0..chunk.code.len() {
+        disassemble_instruction(chunk, index);
+    }
+}
 
-        match instruction {
-            OpCode::OpConstant(index) => constant_instruction("OpConstant", chunk, *index),
-            OpCode::OpReturn => simple_instructon("OpReturn"),
-        }
+pub fn disassemble_instruction(chunk: &Chunk, offset: usize) {
+    print!("{offset:04} ");
+    if offset > 0 && chunk.lines[offset] == chunk.lines[offset - 1] {
+        print!("   | ");
+    } else {
+        print!("{:04} ", chunk.lines[offset]);
+    }
+
+    match chunk.code[offset] {
+        OpCode::OpConstant(index) => constant_instruction("OpConstant", chunk, index),
+        OpCode::OpNegate => simple_instructon("OpNegate"),
+        OpCode::OpReturn => simple_instructon("OpReturn"),
+        OpCode::OpAdd => simple_instructon("OpAdd"),
+        OpCode::OpSubtract => simple_instructon("OpSubstract"),
+        OpCode::OpMultiply => simple_instructon("OpMultiplay"),
+        OpCode::OpDivide => simple_instructon("OpDivide"),
     }
 }
 
