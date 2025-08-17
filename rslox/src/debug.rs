@@ -18,13 +18,13 @@ pub fn disassemble_instruction(chunk: &Chunk, offset: usize) {
     }
 
     match chunk.code[offset] {
-        OpCode::OpConstant(index) => constant_instruction("OpConstant", chunk, index),
-        OpCode::OpNegate => simple_instructon("OpNegate"),
-        OpCode::OpReturn => simple_instructon("OpReturn"),
-        OpCode::OpAdd => simple_instructon("OpAdd"),
-        OpCode::OpSubtract => simple_instructon("OpSubstract"),
-        OpCode::OpMultiply => simple_instructon("OpMultiplay"),
-        OpCode::OpDivide => simple_instructon("OpDivide"),
+        OpCode::Constant(index) => constant_instruction("Constant", chunk, index),
+        OpCode::Negate => simple_instructon("Negate"),
+        OpCode::Return => simple_instructon("Return"),
+        OpCode::Add => simple_instructon("Add"),
+        OpCode::Subtract => simple_instructon("Substract"),
+        OpCode::Multiply => simple_instructon("Multiplay"),
+        OpCode::Divide => simple_instructon("Divide"),
     }
 }
 

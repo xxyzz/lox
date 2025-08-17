@@ -2,13 +2,13 @@ use crate::value::Value;
 
 #[derive(Debug, Clone, Copy)]
 pub enum OpCode {
-    OpConstant(usize),
-    OpNegate,
-    OpReturn,
-    OpAdd,
-    OpSubtract,
-    OpMultiply,
-    OpDivide,
+    Constant(usize),
+    Negate,
+    Return,
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
 }
 
 pub struct Chunk {
@@ -33,6 +33,6 @@ impl Chunk {
 
     pub fn add_constant(&mut self, value: Value, line: usize) {
         self.constants.push(value);
-        self.write(OpCode::OpConstant(self.constants.len() - 1), line);
+        self.write(OpCode::Constant(self.constants.len() - 1), line);
     }
 }

@@ -1,6 +1,7 @@
 use std::env;
 
 use crate::chunk::{Chunk, OpCode};
+use crate::compiler::compile;
 use crate::debug::disassemble_instruction;
 use crate::value::{Value, print_value};
 
@@ -14,9 +15,9 @@ pub struct VM {
 }
 
 pub enum InterpretResult {
-    InterpretOk,
-    InterpretComplileError,
-    InterpretRuntimeError,
+    Ok,
+    ComplileError,
+    RuntimeError,
 }
 
 macro_rules! binary_op {
@@ -64,23 +65,28 @@ impl VM {
             }
             self.ip += 1;
             match instruction {
-                OpCode::OpConstant(constant_index) => {
+                OpCode::Constant(constant_index) => {
                     self.push(self.chunk.constants[constant_index]);
                 }
-                OpCode::OpNegate => {
+                OpCode::Negate => {
                     let value = self.pop();
                     self.push(-value);
                 }
-                OpCode::OpReturn => {
+                OpCode::Return => {
                     print_value(self.pop());
                     println!();
-                    return InterpretResult::InterpretOk;
+                    return InterpretResult::Ok;
                 }
-                OpCode::OpAdd => binary_op!(self, +),
-                OpCode::OpSubtract => binary_op!(self, -),
-                OpCode::OpMultiply => binary_op!(self, *),
-                OpCode::OpDivide => binary_op!(self, /),
+                OpCode::Add => binary_op!(self, +),
+                OpCode::Subtract => binary_op!(self, -),
+                OpCode::Multiply => binary_op!(self, *),
+                OpCode::Divide => binary_op!(self, /),
             }
         }
     }
+}
+
+pub fn interpret(source: &str) -> InterpretResult {
+    compile(source);
+    InterpretResult::Ok
 }
