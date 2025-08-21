@@ -1,7 +1,7 @@
 use std::env;
 
 use crate::chunk::{Chunk, OpCode};
-use crate::compiler::compile;
+use crate::compiler::Compiler;
 use crate::debug::disassemble_instruction;
 use crate::value::{Value, print_value};
 
@@ -31,9 +31,9 @@ macro_rules! binary_op {
 }
 
 impl VM {
-    pub fn new(chunk: Chunk) -> Self {
+    pub fn new() -> Self {
         VM {
-            chunk,
+            chunk: Chunk::new(),
             ip: 0,
             stack: [0.0; STACK_MAX],
             stack_top: 0,
@@ -53,7 +53,7 @@ impl VM {
     pub fn run(&mut self) -> InterpretResult {
         loop {
             let instruction = self.chunk.code[self.ip];
-            if env::var("DEBUG_TRACE").is_ok() {
+            if env::var("DEBUG_TRACE_EXECUTION").is_ok() {
                 print!("          ");
                 for slot in self.stack.iter() {
                     print!("[ ");
@@ -84,9 +84,14 @@ impl VM {
             }
         }
     }
-}
 
-pub fn interpret(source: &str) -> InterpretResult {
-    compile(source);
-    InterpretResult::Ok
+    pub fn interpret(&mut self, source: &str) -> InterpretResult {
+        let mut compiler = Compiler::new(source);
+        if let Some(chunk) = compiler.compile() {
+            self.chunk = chunk;
+        } else {
+            return InterpretResult::ComplileError;
+        }
+        self.run()
+    }
 }

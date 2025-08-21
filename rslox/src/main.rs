@@ -11,8 +11,7 @@ use std::io;
 use std::io::Write;
 use std::process;
 
-use crate::chunk::{Chunk, OpCode};
-use crate::vm::{InterpretResult, VM, interpret};
+use crate::vm::{InterpretResult, VM};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -25,19 +24,6 @@ fn main() {
             process::exit(64);
         }
     }
-
-    let chunk = Chunk::new();
-    let mut vm = VM::new(chunk);
-
-    vm.chunk.add_constant(2.0, 123);
-    vm.chunk.add_constant(1.0, 123);
-    vm.chunk.write(OpCode::Multiply, 123);
-    vm.chunk.add_constant(3.0, 123);
-    vm.chunk.write(OpCode::Add, 123);
-
-    vm.chunk.write(OpCode::Return, 123);
-
-    vm.run();
 }
 
 fn repl() {
@@ -46,14 +32,15 @@ fn repl() {
         io::stdout().flush().unwrap();
         let mut buffer = String::new();
         io::stdin().read_line(&mut buffer).unwrap();
-        interpret(&buffer);
+        let mut vm = VM::new();
+        vm.interpret(&buffer);
     }
 }
 
 fn run_file(path: &str) {
     let source = fs::read_to_string(path).unwrap();
-    let result = interpret(&source);
-
+    let mut vm = VM::new();
+    let result = vm.interpret(&source);
     match result {
         InterpretResult::ComplileError => process::exit(65),
         InterpretResult::RuntimeError => process::exit(70),

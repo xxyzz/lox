@@ -11,6 +11,7 @@ pub enum OpCode {
     Divide,
 }
 
+#[derive(Clone)]
 pub struct Chunk {
     pub code: Vec<OpCode>,
     pub constants: Vec<Value>,
@@ -31,8 +32,8 @@ impl Chunk {
         self.lines.push(line);
     }
 
-    pub fn add_constant(&mut self, value: Value, line: usize) {
+    pub fn add_constant(&mut self, value: Value) -> usize {
         self.constants.push(value);
-        self.write(OpCode::Constant(self.constants.len() - 1), line);
+        self.constants.len() - 1
     }
 }

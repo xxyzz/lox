@@ -5,13 +5,14 @@ pub struct Scanner<'a> {
     line: usize,
 }
 
+#[derive(Default, Clone, Copy)]
 pub struct Token<'a> {
     pub token_type: TokenType,
     pub line: usize,
     pub lexeme: &'a str,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Default, Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum TokenType {
     // Single-character tokens.
     LeftParen,
@@ -56,6 +57,7 @@ pub enum TokenType {
     Var,
     While,
     Error,
+    #[default]
     EOF,
 }
 
@@ -134,7 +136,7 @@ impl<'a> Scanner<'a> {
     }
 
     fn char_at(&self, i: usize) -> char {
-        self.source[i..].chars().next().unwrap_or_else(|| '\0')
+        self.source[i..].chars().next().unwrap_or('\0')
     }
 
     fn is_at_end(&self) -> bool {
@@ -226,7 +228,7 @@ impl<'a> Scanner<'a> {
     }
 
     fn is_digit(&self, c: char) -> bool {
-        c >= '0' && c <= '9'
+        c.is_ascii_digit()
     }
 
     fn number(&mut self) -> Token<'a> {
@@ -245,7 +247,7 @@ impl<'a> Scanner<'a> {
     }
 
     fn is_alpha(&self, c: char) -> bool {
-        (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'
+        c.is_ascii_lowercase() || c.is_ascii_uppercase() || c == '_'
     }
 
     fn identifier(&mut self) -> Token<'a> {
