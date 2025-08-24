@@ -1,5 +1,18 @@
-pub type Value = f64;
+use std::fmt;
 
-pub fn print_value(value: Value) {
-    print!("{value}");
+#[derive(Clone, Copy, PartialEq)]
+pub enum Value {
+    Bool(bool),
+    Nil,
+    Number(f64),
+}
+
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Value::Bool(v) => write!(f, "{v}"),
+            Value::Nil => write!(f, "nil"),
+            Value::Number(num) => write!(f, "{num}"),
+        }
+    }
 }

@@ -174,7 +174,7 @@ impl<'a> Compiler<'a> {
                 (
                     TokenType::Bang,
                     ParserRule {
-                        prefix: None,
+                        prefix: Some(Compiler::unary),
                         infix: None,
                         precedence: Precedence::None,
                     },
@@ -183,8 +183,8 @@ impl<'a> Compiler<'a> {
                     TokenType::BangEqual,
                     ParserRule {
                         prefix: None,
-                        infix: None,
-                        precedence: Precedence::None,
+                        infix: Some(Compiler::binary),
+                        precedence: Precedence::Equality,
                     },
                 ),
                 (
@@ -199,40 +199,40 @@ impl<'a> Compiler<'a> {
                     TokenType::EqualEqual,
                     ParserRule {
                         prefix: None,
-                        infix: None,
-                        precedence: Precedence::None,
+                        infix: Some(Compiler::binary),
+                        precedence: Precedence::Equality,
                     },
                 ),
                 (
                     TokenType::Greater,
                     ParserRule {
                         prefix: None,
-                        infix: None,
-                        precedence: Precedence::None,
+                        infix: Some(Compiler::binary),
+                        precedence: Precedence::Comparison,
                     },
                 ),
                 (
                     TokenType::GreaterEqual,
                     ParserRule {
                         prefix: None,
-                        infix: None,
-                        precedence: Precedence::None,
+                        infix: Some(Compiler::binary),
+                        precedence: Precedence::Comparison,
                     },
                 ),
                 (
                     TokenType::Less,
                     ParserRule {
                         prefix: None,
-                        infix: None,
-                        precedence: Precedence::None,
+                        infix: Some(Compiler::binary),
+                        precedence: Precedence::Comparison,
                     },
                 ),
                 (
                     TokenType::LessEqual,
                     ParserRule {
                         prefix: None,
-                        infix: None,
-                        precedence: Precedence::None,
+                        infix: Some(Compiler::binary),
+                        precedence: Precedence::Comparison,
                     },
                 ),
                 (
@@ -286,7 +286,7 @@ impl<'a> Compiler<'a> {
                 (
                     TokenType::False,
                     ParserRule {
-                        prefix: None,
+                        prefix: Some(Compiler::literal),
                         infix: None,
                         precedence: Precedence::None,
                     },
@@ -318,7 +318,7 @@ impl<'a> Compiler<'a> {
                 (
                     TokenType::Nil,
                     ParserRule {
-                        prefix: None,
+                        prefix: Some(Compiler::literal),
                         infix: None,
                         precedence: Precedence::None,
                     },
@@ -366,7 +366,7 @@ impl<'a> Compiler<'a> {
                 (
                     TokenType::True,
                     ParserRule {
-                        prefix: None,
+                        prefix: Some(Compiler::literal),
                         infix: None,
                         precedence: Precedence::None,
                     },
@@ -492,10 +492,25 @@ impl<'a> Compiler<'a> {
         let rule = self.get_rule(operator_type);
         self.parse_precedence(rule.precedence + 1);
         match operator_type {
+            TokenType::BangEqual => self.emit_bytes(OpCode::Equal, OpCode::Not),
+            TokenType::EqualEqual => self.emit_byte(OpCode::Equal),
+            TokenType::Greater => self.emit_byte(OpCode::Greater),
+            TokenType::GreaterEqual => self.emit_bytes(OpCode::Less, OpCode::Not),
+            TokenType::Less => self.emit_byte(OpCode::Less),
+            TokenType::LessEqual => self.emit_bytes(OpCode::Greater, OpCode::Not),
             TokenType::Plus => self.emit_byte(OpCode::Add),
             TokenType::Minus => self.emit_byte(OpCode::Subtract),
             TokenType::Star => self.emit_byte(OpCode::Multiply),
             TokenType::Slash => self.emit_byte(OpCode::Divide),
+            _ => unreachable!(),
+        }
+    }
+
+    fn literal(&mut self) {
+        match self.parser.previous.token_type {
+            TokenType::False => self.emit_byte(OpCode::False),
+            TokenType::Nil => self.emit_byte(OpCode::Nil),
+            TokenType::True => self.emit_byte(OpCode::True),
             _ => unreachable!(),
         }
     }
@@ -511,7 +526,7 @@ impl<'a> Compiler<'a> {
 
     fn number(&mut self) {
         let value: f64 = self.parser.previous.lexeme.parse().unwrap();
-        self.emit_constant(value);
+        self.emit_constant(Value::Number(value));
     }
 
     fn unary(&mut self) {
@@ -520,6 +535,7 @@ impl<'a> Compiler<'a> {
         self.parse_precedence(Precedence::Unary);
         // Emit the operator instruction.
         match operator_type {
+            TokenType::Bang => self.emit_byte(OpCode::Not),
             TokenType::Minus => self.emit_byte(OpCode::Negate),
             _ => unreachable!(),
         }

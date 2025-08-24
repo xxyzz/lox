@@ -1,5 +1,4 @@
 use crate::chunk::{Chunk, OpCode};
-use crate::value::print_value;
 
 pub fn disassemble_chunk(chunk: &Chunk, name: &str) {
     println!("== {name} ==");
@@ -19,12 +18,19 @@ pub fn disassemble_instruction(chunk: &Chunk, offset: usize) {
 
     match chunk.code[offset] {
         OpCode::Constant(index) => constant_instruction("Constant", chunk, index),
-        OpCode::Negate => simple_instructon("Negate"),
-        OpCode::Return => simple_instructon("Return"),
+        OpCode::Nil => simple_instructon("Nil"),
+        OpCode::True => simple_instructon("True"),
+        OpCode::False => simple_instructon("False"),
+        OpCode::Equal => simple_instructon("Equal"),
+        OpCode::Greater => simple_instructon("Greater"),
+        OpCode::Less => simple_instructon("Less"),
         OpCode::Add => simple_instructon("Add"),
         OpCode::Subtract => simple_instructon("Substract"),
         OpCode::Multiply => simple_instructon("Multiplay"),
         OpCode::Divide => simple_instructon("Divide"),
+        OpCode::Not => simple_instructon("Not"),
+        OpCode::Negate => simple_instructon("Negate"),
+        OpCode::Return => simple_instructon("Return"),
     }
 }
 
@@ -33,7 +39,5 @@ fn simple_instructon(name: &str) {
 }
 
 fn constant_instruction(name: &str, chunk: &Chunk, index: usize) {
-    print!("{name:<16} {index:4} '");
-    print_value(chunk.constants[index]);
-    println!("'");
+    println!("{name:<16} {index:4} '{}'", chunk.constants[index])
 }

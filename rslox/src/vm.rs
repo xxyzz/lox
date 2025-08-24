@@ -3,7 +3,7 @@ use std::env;
 use crate::chunk::{Chunk, OpCode};
 use crate::compiler::Compiler;
 use crate::debug::disassemble_instruction;
-use crate::value::{Value, print_value};
+use crate::value::Value;
 
 const STACK_MAX: usize = 256;
 
@@ -21,11 +21,18 @@ pub enum InterpretResult {
 }
 
 macro_rules! binary_op {
-    ( $vm:ident, $op:tt ) => {
+    ( $vm:ident, $value_constructor:expr, $op:tt ) => {
         {
-            let b = $vm.pop();
-            let a = $vm.pop();
-            $vm.push(a $op b);
+            let p_b = $vm.peek(0);
+            let p_a = $vm.peek(1);
+            if let Value::Number(a) = p_a && let Value::Number(b) = p_b {
+                $vm.pop();
+                $vm.pop();
+                $vm.push($value_constructor(a $op b));
+            } else {
+                $vm.runtime_error("Operands must be numbers.");
+                return InterpretResult::RuntimeError;
+            }
         }
     }
 }
@@ -35,30 +42,33 @@ impl VM {
         VM {
             chunk: Chunk::new(),
             ip: 0,
-            stack: [0.0; STACK_MAX],
+            stack: [Value::Number(0.0); STACK_MAX],
             stack_top: 0,
         }
     }
 
-    pub fn push(&mut self, value: Value) {
+    fn runtime_error(&self, message: &str) {
+        eprintln!("{message}");
+        eprintln!("[line {}] in script", self.chunk.lines[self.ip - 1]);
+    }
+
+    fn push(&mut self, value: Value) {
         self.stack[self.stack_top] = value;
         self.stack_top += 1;
     }
 
-    pub fn pop(&mut self) -> Value {
+    fn pop(&mut self) -> Value {
         self.stack_top -= 1;
         self.stack[self.stack_top]
     }
 
-    pub fn run(&mut self) -> InterpretResult {
+    fn run(&mut self) -> InterpretResult {
         loop {
             let instruction = self.chunk.code[self.ip];
             if env::var("DEBUG_TRACE_EXECUTION").is_ok() {
                 print!("          ");
                 for slot in self.stack.iter() {
-                    print!("[ ");
-                    print_value(*slot);
-                    print!(" ]");
+                    print!("[ {} ]", slot);
                 }
                 println!();
                 disassemble_instruction(&self.chunk, self.ip);
@@ -68,19 +78,38 @@ impl VM {
                 OpCode::Constant(constant_index) => {
                     self.push(self.chunk.constants[constant_index]);
                 }
+                OpCode::Nil => self.push(Value::Nil),
+                OpCode::True => self.push(Value::Bool(true)),
+                OpCode::False => self.push(Value::Bool(false)),
+                OpCode::Equal => {
+                    let b = self.pop();
+                    let a = self.pop();
+                    self.push(Value::Bool(a == b));
+                }
+                OpCode::Greater => binary_op!(self, Value::Bool, >),
+                OpCode::Less => binary_op!(self, Value::Bool, <),
+                OpCode::Add => binary_op!(self, Value::Number, +),
+                OpCode::Subtract => binary_op!(self, Value::Number, -),
+                OpCode::Multiply => binary_op!(self, Value::Number, *),
+                OpCode::Divide => binary_op!(self, Value::Number, /),
+                OpCode::Not => {
+                    let v = self.pop();
+                    self.push(Value::Bool(self.is_falsey(v)))
+                }
                 OpCode::Negate => {
-                    let value = self.pop();
-                    self.push(-value);
+                    let value = self.peek(0);
+                    if let Value::Number(num) = value {
+                        self.pop();
+                        self.push(Value::Number(-num));
+                    } else {
+                        self.runtime_error("Operand must be a number.");
+                        return InterpretResult::RuntimeError;
+                    }
                 }
                 OpCode::Return => {
-                    print_value(self.pop());
-                    println!();
+                    println!("{}", self.pop());
                     return InterpretResult::Ok;
                 }
-                OpCode::Add => binary_op!(self, +),
-                OpCode::Subtract => binary_op!(self, -),
-                OpCode::Multiply => binary_op!(self, *),
-                OpCode::Divide => binary_op!(self, /),
             }
         }
     }
@@ -93,5 +122,17 @@ impl VM {
             return InterpretResult::ComplileError;
         }
         self.run()
+    }
+
+    fn peek(&self, distance: usize) -> Value {
+        self.stack[self.stack_top - 1 - distance]
+    }
+
+    fn is_falsey(&self, value: Value) -> bool {
+        match value {
+            Value::Nil => true,
+            Value::Bool(b) => !b,
+            _ => true,
+        }
     }
 }
